@@ -1,0 +1,104 @@
+version: '3.8'
+
+services:
+  # Base de datos PostgreSQL
+  postgres:
+    image: postgres:15
+    container_name: postgres_db
+    restart: always
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin123
+      POSTGRES_DB: products_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-scripts/postgres:/docker-entrypoint-initdb.d
+    networks:
+      - microservicios-network
+
+  # Base de datos MongoDB
+  mongodb:
+    image: mongo:7
+    container_name: mongo_db
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: admin123
+      MONGO_INITDB_DATABASE: products_mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - microservicios-network
+
+  # ActiveMQ
+  activemq:
+    image: rmohr/activemq:5.15.9
+    container_name: activemq
+    restart: always
+    ports:
+      - "61616:61616"  # Puerto para conexiones STOMP
+      - "8161:8161"    # Puerto para consola web
+    environment:
+      ACTIVEMQ_CONFIG_NAME: default
+      ACTIVEMQ_CONFIG_DEFAULTACCOUNT: false
+      ACTIVEMQ_ADMIN_LOGIN: admin
+      ACTIVEMQ_ADMIN_PASSWORD: admin
+    networks:
+      - microservicios-network
+
+  # Microservicio principal (API)
+  api-service:
+    build:
+      context: ./api-service
+      dockerfile: Dockerfile
+    container_name: api_service
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/products_db
+      SPRING_DATASOURCE_USERNAME: admin
+      SPRING_DATASOURCE_PASSWORD: admin123
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      ACTIVEMQ_BROKER_URL: tcp://activemq:61616
+      ACTIVEMQ_USER: admin
+      ACTIVEMQ_PASSWORD: admin
+    depends_on:
+      - postgres
+      - activemq
+    networks:
+      - microservicios-network
+
+  # Microservicio worker
+  worker-service:
+    build:
+      context: ./worker-service
+      dockerfile: Dockerfile
+    container_name: worker_service
+    restart: always
+    environment:
+      SPRING_DATA_MONGODB_HOST: mongodb
+      SPRING_DATA_MONGODB_PORT: 27017
+      SPRING_DATA_MONGODB_DATABASE: products_mongo
+      SPRING_DATA_MONGODB_USERNAME: admin
+      SPRING_DATA_MONGODB_PASSWORD: admin123
+      ACTIVEMQ_BROKER_URL: tcp://activemq:61616
+      ACTIVEMQ_USER: admin
+      ACTIVEMQ_PASSWORD: admin
+    depends_on:
+      - mongodb
+      - activemq
+    networks:
+      - microservicios-network
+
+volumes:
+  postgres_data:
+  mongodb_data:
+
+networks:
+  microservicios-network:
+    driver: bridge
