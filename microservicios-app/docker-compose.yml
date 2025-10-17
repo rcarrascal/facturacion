@@ -40,8 +40,8 @@ services:
     container_name: activemq
     restart: always
     ports:
-      - "61616:61616"  # Puerto para conexiones STOMP
-      - "8161:8161"    # Puerto para consola web
+      - "61616:61616" 
+      - "8161:8161"    
     environment:
       ACTIVEMQ_CONFIG_NAME: default
       ACTIVEMQ_CONFIG_DEFAULTACCOUNT: false

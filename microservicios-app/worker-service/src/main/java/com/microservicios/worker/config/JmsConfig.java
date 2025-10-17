@@ -31,20 +31,12 @@ public class JmsConfig {
         return factory;
     }
     
-    @Bean
-    public MessageConverter jacksonJmsMessageConverter() {
-        MappingJackson2MessageConverter converter = new MappingJackson2MessageConverter();
-        converter.setTargetType(MessageType.TEXT);
-        converter.setTypeIdPropertyName("_type");
-        return converter;
-    }
+
     
     @Bean
     public DefaultJmsListenerContainerFactory jmsListenerContainerFactory() {
         DefaultJmsListenerContainerFactory factory = new DefaultJmsListenerContainerFactory();
         factory.setConnectionFactory(connectionFactory());
-        factory.setMessageConverter(jacksonJmsMessageConverter());
-        factory.setConcurrency("1-5");
         return factory;
     }
 }
